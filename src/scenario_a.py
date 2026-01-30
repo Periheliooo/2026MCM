@@ -8,8 +8,8 @@ NUM_HARBORS = 3                    # 港口数量
 
 # --- 2. 成本参数定义 (核心修改部分) ---
 # 运输单价 (每公吨)
-COST_EARTH_TO_APEX = 500_000       
-COST_APEX_TO_MOON = 100_000        
+COST_EARTH_TO_APEX = 50_000       
+COST_APEX_TO_MOON = 10_000        
 UNIT_TRANSPORT_COST = COST_EARTH_TO_APEX + COST_APEX_TO_MOON # 60万/吨
 
 # 维护成本 (每年固定支出)
