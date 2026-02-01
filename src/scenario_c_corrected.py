@@ -124,6 +124,8 @@ for target_year, group in grouped:
 
 pareto_new_df = pd.DataFrame(summary_data)
 
+print(pareto_new_df[pareto_new_df['Target_Completion_Year'] == 2142]['Total_Cost_Billion'].iloc[0]) #打印2142年的总成本以验证
+
 # ==========================================
 # 6. 保存文件与绘图
 # ==========================================
