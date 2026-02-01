@@ -11,7 +11,7 @@ import matplotlib.patches as mpatches
 np.random.seed(101)  # 固定种子以复现结果
 DAYS = 365
 POPULATION = 100000
-WATER_PER_CAPITA = 30  # L/day
+WATER_PER_CAPITA = 40  # L/day
 RECYCLE_RATE = 0.80
 NET_DEMAND_PER_PERSON = WATER_PER_CAPITA * (1 - RECYCLE_RATE)
 DAILY_DEMAND_TONS = (POPULATION * NET_DEMAND_PER_PERSON) / 1000  # 100 tons
@@ -20,7 +20,7 @@ DAILY_DEMAND_TONS = (POPULATION * NET_DEMAND_PER_PERSON) / 1000  # 100 tons
 COST_ROCKET = 261.0      # $/kg
 COST_ELEVATOR = 60.0     # $/kg
 COST_STORAGE = 0.50      # $/kg/day (高昂存储费)
-COST_PENALTY = 20000.0   # $/kg (不可接受的缺水)
+COST_PENALTY = 2000.0   # $/kg (不可接受的缺水)
 
 # 运输参数
 LEAD_TIME_ROCKET = 3     # days
