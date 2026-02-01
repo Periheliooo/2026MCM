@@ -58,32 +58,26 @@ class HeuristicSampling(Sampling):
         global_rocket_cap = self.model.GLOBAL_ROCKET_CAPACITY_YEAR
         
         for i in range(n_samples):
-            # 策略 A: 激进型 - 从第0年开始就全力加速 (确保能找到可行解)
-            if i < n_samples * 0.2: # 前20%的个体
+            # 策略 A: 激进型 - 从第0年开始就全力加速
+            if i < n_samples * 0.2: 
                 X[i, :self.n_years] = self.model.SE_CAPACITY_YEAR
-                # 火箭从第0年开始，随机使用 50%~100% 运力
                 rocket_usage = np.random.uniform(0.5, 1.0, self.n_years) * global_rocket_cap
                 X[i, self.n_years:] = rocket_usage
                 continue
 
-            # 策略 B: 混合启发式 (Expanded Range)
-            # [修改] start_year 允许从第0年开始，直到倒数第10年
+            # 策略 B: 混合启发式
             start_year = np.random.randint(0, self.n_years - 10)
             
-            # 1. 填充 SE (加入稍大的扰动，允许某些年份不满载以换取环境分)
+            # 1. 填充 SE
             se_usage = np.random.uniform(0.8, 1.0, self.n_years) * self.model.SE_CAPACITY_YEAR
             X[i, :self.n_years] = se_usage
             
             # 2. 填充 Rocket
-            # start_year 之前保持极低 (或0)
             X[i, self.n_years : self.n_years + start_year] = 0
             
-            # start_year 之后
             duration = self.n_years - start_year
             if duration > 0:
                 growth_curve = np.linspace(0, 1, duration)
-                
-                # [修改] 允许更高的峰值运力 (50% ~ 100%)，确保能运完
                 peak_ratio = np.random.uniform(0.5, 1.0) 
                 peak_cap = peak_ratio * global_rocket_cap
                 
@@ -106,8 +100,7 @@ def solve_pareto():
         print(f"Error loading model: {e}")
         return
 
-    # [关键修改] 延长规划期至 130年 (2050-2180)
-    # 理由：最快理论完工需76年，80年太紧，130年有充足冗余寻找最优
+    # 规划期 130年
     N_YEARS = 130 
     problem = MoonOptimizationProblem(phys_model, n_years=N_YEARS)
     
@@ -131,29 +124,47 @@ def solve_pareto():
                    termination,
                    seed=42,
                    save_history=True,
-                   verbose=True) # verbose=True 可以看到每一代的 cv (constraint violation)
+                   verbose=True)
     
     print(f"优化完成! 耗时: {res.exec_time:.2f}s")
     
+    # ==========================================
+    # 4. 结果处理 (修正部分)
+    # ==========================================
     if res.F is not None:
         # 筛选可行解
-        feasible_mask = (res.CV.flatten() <= 1e-5) # 允许微小误差
+        feasible_mask = (res.CV.flatten() <= 1e-5) 
+        
         F_feasible = res.F[feasible_mask]
+        X_feasible = res.X[feasible_mask] # <--- [修正] 同时提取对应的 X
         
         if len(F_feasible) == 0:
             print("警告: 仍未找到完全满足约束的解。尝试显示 CV 最小的解...")
             best_cv_idx = np.argmin(res.CV.flatten())
             print(f"最小违背量 (CV): {res.CV[best_cv_idx]}")
-            print(f"对应目标: {res.F[best_cv_idx]}")
+            
+            # 如果没有可行解，使用所有解作为结果（虽然不满足约束，但供参考）
             F_final = res.F
+            X_final = res.X # <--- [修正] 赋值 X_final
         else:
             print(f"成功找到 {len(F_feasible)} 个 Pareto 最优解。")
             F_final = F_feasible
+            X_final = X_feasible # <--- [修正] 赋值 X_final
             
         result_df = pd.DataFrame(F_final, columns=['Cost(Billion)', 'Time(Years)', 'Env_Impact'])
         
+        # 保存 X_final (决策变量)
+        # 这一步非常重要，供后续可视化使用
+        X_df = pd.DataFrame(X_final)
+        # 为列命名方便阅读 (SE_0...SE_N, Rocket_0...Rocket_N)
+        cols = [f'SE_Year_{i}' for i in range(N_YEARS)] + [f'Rocket_Year_{i}' for i in range(N_YEARS)]
+        X_df.columns = cols
+        
+        os.makedirs('data', exist_ok=True)
+        X_df.to_csv('data/nsga2_pareto_solutions_X.csv', index=False)
+        print("决策变量已保存至 data/nsga2_pareto_solutions_X.csv")
+
         # 选出代表性解
-        # 增加 try-except 防止空数组报错
         if len(F_final) > 0:
             best_cost_idx = np.argmin(F_final[:, 0])
             best_time_idx = np.argmin(F_final[:, 1])
@@ -164,9 +175,8 @@ def solve_pareto():
             print(f"2. 最快完工: ${F_final[best_time_idx, 0]:.2f}B, {F_final[best_time_idx, 1]:.1f}年, Env:{F_final[best_time_idx, 2]:.2f}")
             print(f"3. 最佳环境: ${F_final[best_env_idx, 0]:.2f}B, {F_final[best_env_idx, 1]:.1f}年, Env:{F_final[best_env_idx, 2]:.2f}")
 
-        os.makedirs('data', exist_ok=True)
         result_df.to_csv('data/nsga2_pareto_results.csv', index=False)
-        print("Pareto 数据已保存至 data/nsga2_pareto_results.csv")
+        print("Pareto 目标值已保存至 data/nsga2_pareto_results.csv")
         
         # 绘图
         try:
