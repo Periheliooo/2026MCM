@@ -100,8 +100,8 @@ def solve_pareto():
         print(f"Error loading model: {e}")
         return
 
-    # 规划期 130年
-    N_YEARS = 130 
+    # 规划期 120年
+    N_YEARS = 120 
     problem = MoonOptimizationProblem(phys_model, n_years=N_YEARS)
     
     print(f"优化配置: 规划期 {N_YEARS} 年")

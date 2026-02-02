@@ -136,61 +136,151 @@ def visualize_specific_solution(best_idx=0):
         
     # 创建 DataFrame
     df_hist = pd.DataFrame(history)
-    
-    # 3. 绘图
-    fig = plt.figure(figsize=(15, 12))
-    gs = fig.add_gridspec(3, 2)
-    
-    # 图A: 运输策略堆叠图 (Transport Strategy)
-    ax1 = fig.add_subplot(gs[0, :])
-    ax1.stackplot(df_hist['Year'], df_hist['SE_Flow'], df_hist['Rocket_Flow'], 
-                  labels=['Space Elevator', 'Rocket'], 
-                  colors=['#3498db', '#e74c3c'], alpha=0.8)
-    ax1.set_title(f'Optimal Transport Strategy (Solution ID: {best_idx})', fontsize=14, fontweight='bold')
-    ax1.set_ylabel('Annual Transport Volume (10k Tons)', fontsize=12)
-    ax1.legend(loc='upper left')
-    ax1.grid(True, alpha=0.3)
-    
-    # 标注完工时间
-    complete_row = df_hist[df_hist['Accumulated_Transport'] >= 100].head(1)
-    if not complete_row.empty:
-        end_year = complete_row['Year'].values[0]
-        ax1.axvline(end_year, color='green', linestyle='--', linewidth=2, label='Completion')
-        ax1.text(end_year+1, ax1.get_ylim()[1]*0.8, f'Completed: {end_year}', color='green', fontweight='bold')
 
-    # 图B: 环境累积压力 (At vs Threshold)
+    # ... [前面的数据处理逻辑保持不变] ...
+
+    # 1. 更加现代的样式设置
+    plt.style.use('seaborn-v0_8-paper') # 使用更适合论文的精细风格
+    sns.set_palette("viridis") # 使用科学配色
+    
+    fig = plt.figure(figsize=(14, 10), constrained_layout=True)
+    gs = fig.add_gridspec(3, 2, height_ratios=[1.2, 1, 0.8])
+    
+    # --- 图A: 运输策略 (现代化的面积图) ---
+    ax1 = fig.add_subplot(gs[0, :])
+    # 使用渐变感配色
+    colors = ['#5dade2', '#ec7063']
+    ax1.stackplot(df_hist['Year'], df_hist['SE_Flow'], df_hist['Rocket_Flow'], 
+                  labels=['太空电梯 (Space Elevator)', '化学火箭 (Rocket)'], 
+                  colors=colors, alpha=0.85, edgecolor='white', linewidth=0.5)
+    
+    ax1.set_title(f'Strategy Profile: Solution #{best_idx}', loc='left', fontsize=16, fontweight='bold', pad=20)
+    ax1.set_ylabel('Volume (10k Tons/yr)', fontsize=12)
+    
+    # 动态标注：完成度
+    comp_year = df_hist[df_hist['Accumulated_Transport'] >= 100]['Year'].min()
+    ax1.axvline(comp_year, color='#27ae60', linestyle=':', linewidth=2)
+    ax1.annotate(f'Mission Target Reached: {int(comp_year)}', xy=(comp_year, ax1.get_ylim()[1]*0.5), 
+                 xytext=(comp_year+2, ax1.get_ylim()[1]*0.6),
+                 arrowprops=dict(arrowstyle='->', color='#27ae60'), color='#1e8449', fontweight='bold')
+
+    # --- 图B: 环境压力 (双轴或带状图) ---
     ax2 = fig.add_subplot(gs[1, 0])
-    ax2.plot(df_hist['Year'], df_hist['Env_Impact_Accum (At)'], color='purple', linewidth=2, label='Accumulated Impact ($A_t$)')
-    ax2.plot(df_hist['Year'], df_hist['Env_Threshold (A)'], color='red', linestyle='--', label='Carrying Capacity ($A$)')
-    ax2.fill_between(df_hist['Year'], df_hist['Env_Impact_Accum (At)'], color='purple', alpha=0.1)
-    ax2.set_title('Environmental Stress Dynamics ($A_t$)', fontsize=14, fontweight='bold')
-    ax2.set_ylabel('Accumulated Impact Index', fontsize=12)
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+    ax2.fill_between(df_hist['Year'], df_hist['Env_Threshold (A)'], color='gray', alpha=0.1, label='Safe Zone')
+    ax2.plot(df_hist['Year'], df_hist['Env_Impact_Accum (At)'], color='#8e44ad', lw=2.5, label='Actual Stress ($A_t$)')
+    ax2.axhline(model.env_threshold_A, color='#c0392b', ls='--', lw=1.5, label='Threshold')
     
-    # 图C: 年度总环境影响 (Yearly Impact)
+    # 局部高亮：如果超标则标红
+    over_limit = df_hist['Env_Impact_Accum (At)'] > df_hist['Env_Threshold (A)']
+    ax2.fill_between(df_hist['Year'], df_hist['Env_Impact_Accum (At)'], df_hist['Env_Threshold (A)'], 
+                     where=over_limit, color='#e74c3c', alpha=0.3, label='Exceedance')
+    
+    ax2.set_title('Environmental Carrying Capacity', fontsize=13, fontweight='semibold')
+    ax2.legend(frameon=True, loc='upper left', fontsize=9)
+
+    # --- 图C: 年度环境流量 (柱状图) ---
     ax3 = fig.add_subplot(gs[1, 1])
-    ax3.plot(df_hist['Year'], df_hist['Env_Impact_Yearly'], color='orange', linewidth=2, label='Yearly Total Impact')
-    ax3.set_title('Annual Environmental Impact Flow', fontsize=14, fontweight='bold')
-    ax3.set_ylabel('Impact Index', fontsize=12)
-    ax3.legend()
-    ax3.grid(True, alpha=0.3)
-    
-    # 图D: 成本分布 (Cost Profile)
+    ax3.bar(df_hist['Year'], df_hist['Env_Impact_Yearly'], color='#f39c12', alpha=0.7, width=0.8)
+    ax3.set_title('Annual Environmental Impact Flow', fontsize=13, fontweight='semibold')
+    ax3.set_ylabel('Impact Index')
+
+    # --- 图D: 成本分布 (带平滑线的散点) ---
     ax4 = fig.add_subplot(gs[2, :])
-    ax4.plot(df_hist['Year'], df_hist['Cost_Yearly'], color='darkgreen', marker='o', markersize=3, alpha=0.6)
-    ax4.set_title('Annual Expenditure Profile', fontsize=14, fontweight='bold')
-    ax4.set_ylabel('Cost (Billion USD)', fontsize=12)
-    ax4.set_xlabel('Year')
-    ax4.grid(True, alpha=0.3)
+    ax4.fill_between(df_hist['Year'], df_hist['Cost_Yearly'], color='#2ecc71', alpha=0.15)
+    ax4.plot(df_hist['Year'], df_hist['Cost_Yearly'], color='#27ae60', marker='o', ms=4, lw=1.5, mec='white')
     
-    plt.tight_layout()
-    os.makedirs('images', exist_ok=True)
-    save_path = f'images/optimal_solution_{best_idx}_details.png'
-    plt.savefig(save_path, dpi=300)
-    print(f"图表已生成: {save_path}")
-    # plt.show()
+    ax4.set_title('Capital Expenditure (CapEx/OpEx) Profile', fontsize=13, fontweight='semibold')
+    ax4.set_ylabel('Cost (Billion USD)')
+    ax4.set_xlabel('Timeline (Year)')
+
+    # 全局美化
+    for ax in [ax1, ax2, ax3, ax4]:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.grid(axis='y', linestyle='--', alpha=0.4)
+
+    plt.savefig(f'images/optimal_solution_{best_idx}_pro.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+
+def plot_final_topsis_3d_pareto(df_F, knee_idx=32):
+    """
+    绘制包含膝点、投影线和 TOPSIS 得分映射的专业 3D 帕累托图
+    """
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # 1. 准备数据
+    x = df_F['Cost(Billion)']
+    y = df_F['Time(Years)']
+    z = df_F['Env_Impact']
+    
+    # 假设你已经算出了综合得分 (如果没有，请将下行替换为固定值如 s=50)
+    # 映射得分到点的大小，得分越高点越大
+    scores = df_F['Score'] if 'Score' in df_F.columns else np.linspace(20, 100, len(df_F))
+    sizes = scores * 1.5  # 缩放因子
+    
+    # 2. 绘制基础帕累托前沿
+    # 使用渐变色 cmap='plasma' 增加科技感
+    sc = ax.scatter(x, y, z, c=z, cmap='plasma', s=sizes, alpha=0.4, edgecolors='w', linewidth=0.3)
+    
+    # 3. 绘制通用背景投影 (仅到底面，保持画面整洁)
+    for xi, yi, zi in zip(x, y, z):
+        ax.plot([xi, xi], [yi, yi], [z.min(), zi], color='lightgray', linestyle='-', linewidth=0.3, alpha=0.1)
+    
+    # 4. 膝点高亮与多维投影
+    if knee_idx in df_F.index:
+        knee = df_F.loc[knee_idx]
+        kx, ky, kz = knee['Cost(Billion)'], knee['Time(Years)'], knee['Env_Impact']
+        
+        # 膝点本体：红色巨大五角星
+        ax.scatter(kx, ky, kz, color='#FF0000', marker='*', s=500, edgecolors='k', linewidth=1.2, label='Knee Point (Best Selection)', zorder=20)
+        
+        # 膝点专属投影线：连接到三个轴的平面，增强空间定位
+        ax.plot([kx, kx], [ky, ky], [z.min(), kz], color='#FF0000', linestyle='--', linewidth=1.5, alpha=0.8) # Z轴向
+        ax.plot([x.min(), kx], [ky, ky], [kz, kz], color='#FF0000', linestyle=':', linewidth=1.2, alpha=0.5)  # X轴向
+        ax.plot([kx, kx], [y.min(), ky], [kz, kz], color='#FF0000', linestyle=':', linewidth=1.2, alpha=0.5)  # Y轴向
+        
+        # 膝点数值标注：使用带框的文本
+        label_txt = f"  RECOMENDED SOLUTION\n  -------------------\n  Cost: ${kx:,.0f}B\n  Time: {ky:.1f}y\n  Env: {kz/1e6:.2f}M"
+        ax.text(kx, ky, kz * 1.05, label_txt, color='black', fontsize=9, fontweight='bold', 
+                bbox=dict(facecolor='white', alpha=0.7, edgecolor='#FF0000', boxstyle='round,pad=0.5'))
+
+    # 5. 视觉精修
+    ax.set_xlabel('\nTotal Cost ($B)', fontsize=10, fontweight='bold')
+    ax.set_ylabel('\nCompletion Time (Years)', fontsize=10, fontweight='bold')
+    ax.set_zlabel('\nEnvironmental Impact Index', fontsize=10, fontweight='bold')
+    
+    # 去除冗余网格色块
+    ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    
+    # 颜色条标注
+    cbar = plt.colorbar(sc, ax=ax, shrink=0.4, aspect=15, pad=0.05)
+    cbar.set_label('Impact Severity', rotation=270, labelpad=15)
+    
+    # 视角微调
+    ax.view_init(elev=22, azim=-125)
+    ax.legend(loc='upper left', bbox_to_anchor=(0.02, 0.9), frameon=True, shadow=True)
+    
+    plt.title('Multi-Objective Strategic Selection\n(Knee Point Analysis for Moon Colony Logistics)', fontsize=15, fontweight='bold', pad=5)
+    plt.savefig('images/final_topsis_3d_pareto_pro.png', dpi=300)
+    plt.show()
+
+# 调用示例
+# plot_refined_3d_pareto_with_knee(df_F, knee_idx=32)
 
 if __name__ == "__main__":
     # 使用 select_best_solution.py 推荐的 ID
     visualize_specific_solution(best_idx=0)
+    # 绘制包含膝点高亮的 3D Pareto 图
+    try:
+        df_F = pd.read_csv('data/nsga2_pareto_results.csv')
+        plot_final_topsis_3d_pareto(df_F, knee_idx=88)
+    except FileNotFoundError:
+        print("错误：找不到 Pareto 结果文件。请先运行 solver 并确保保存了结果数据。")
+    # 可根据需要更改 best_idx 和 knee_idx 参数

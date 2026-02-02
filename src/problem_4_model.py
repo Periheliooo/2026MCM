@@ -68,7 +68,7 @@ class MoonColonyModel:
         print(f"全球火箭年最大发射次数: {self.total_launches_global:,.0f}")
         print(f"全球火箭年运力上限: {self.GLOBAL_ROCKET_CAPACITY_YEAR:,.0f} 吨/年")
 
-        self.DISCOUNT_RATE_MONEY = 0.03  
+        self.DISCOUNT_RATE_MONEY = 0.0  
         self.SE_FIXED_COST = 4.12e9      
         self.SE_VAR_COST = 60000         
 
@@ -82,18 +82,18 @@ class MoonColonyModel:
         # 4. 环境影响模型参数
         # ==========================================
         self.DISCOUNT_RATE_ENV = 0.02    
-        self.c_SE = 10.0   
-        self.c_R = 50.0    
+        self.c_SE = 0.1   
+        self.c_R = 0.5    
         self.geo_factor_SE = 2.5 
         self.env_threshold_A = 1e6       
-        self.c_st = 5e7                  
-        self.k_penalty = 2.0             
+        self.c_st = 1e11                  
+        self.k_penalty = 4.0             
         self.r_penalty = 1.5             
         self.decay_rate = 0.1            
         self.a_SE = 1.0
         self.a_R = 1.0
-        self.debris_coeff_launch = 0.1   
-        self.debris_coeff_fail = 5.0     
+        self.debris_coeff_launch = 0   
+        self.debris_coeff_fail = 0     
         self.prob_fail = 0.05            
         self.cost_per_debris_unit = 1e4  
 

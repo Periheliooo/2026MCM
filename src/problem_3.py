@@ -172,6 +172,17 @@ ax1.set_ylabel('Inventory Level (Tons)', color=color_inv, fontsize=12)
 ax1.tick_params(axis='y', labelcolor=color_inv)
 ax1.set_ylim(0, max(hist_inv)*1.2)
 
+# === 危险库存区间填充 ===
+ax1.fill_between(
+    range(DAYS),
+    0,
+    opt_rop,
+    color='#F1948A',
+    alpha=0.15,
+    label='High-Risk Inventory Zone'
+)
+
+
 # 辅助线
 ax1.axhline(y=opt_ss, color='green', linestyle='--', alpha=0.7, label=f'Safety Stock Target ({int(opt_ss)}t)')
 ax1.axhline(y=opt_rop, color='#D35400', linestyle='--', alpha=0.7, label=f'Rocket Trigger Threshold ({int(opt_rop)}t)')
@@ -191,6 +202,19 @@ ax2.set_ylim(0, max(roc_amts)*3) # 留出空间
 lines, labels = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 ax1.legend(lines + lines2, labels + labels2, loc='upper left', frameon=True, fancybox=True, framealpha=0.9)
+
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+axins = inset_axes(ax1, width="35%", height="35%", loc='upper right')
+zoom_start, zoom_end = 250, 310
+
+axins.plot(hist_inv[zoom_start:zoom_end], color=color_inv)
+axins.axhline(opt_ss, linestyle='--', color='green', alpha=0.6)
+axins.axhline(opt_rop, linestyle='--', color='#D35400', alpha=0.6)
+axins.set_title('Zoomed-in Crisis Window', fontsize=10)
+axins.set_xticks([])
+axins.set_yticks([])
+
 
 plt.title('Dual-Mode Inventory Control: Space Elevator Baseload + Rocket Response', fontsize=14, fontweight='bold', pad=20)
 plt.tight_layout()
@@ -228,6 +252,16 @@ ax = sns.heatmap(plot_df,
                  linewidths=0.05,
                  linecolor='#444444',
                  mask=pd.isnull(results_matrix))
+
+# === 叠加等成本线（等高线）===
+cs = ax.contour(
+    results_matrix,
+    levels=8,
+    colors='white',
+    linewidths=0.8,
+    alpha=0.6
+)
+ax.clabel(cs, inline=True, fontsize=8, fmt='%.1e')
 
 # 4. 优化不可行域颜色 (强制区分)
 # 使用浅灰色背景，使其与可行域（深蓝到黄）产生强烈视觉反差

@@ -10,7 +10,7 @@ NUM_HARBORS = 3                    # 港口数量
 # 运输单价 (每公吨)
 COST_EARTH_TO_APEX = 50_000       
 COST_APEX_TO_MOON = 10_000        
-UNIT_TRANSPORT_COST = COST_EARTH_TO_APEX + COST_APEX_TO_MOON # 60万/吨
+UNIT_TRANSPORT_COST = COST_EARTH_TO_APEX + COST_APEX_TO_MOON # 6万/吨
 
 # 维护成本 (每年固定支出)
 # 用户指定：4.12 * 10^9 (41.2亿)
